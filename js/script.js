@@ -1,14 +1,18 @@
 let budgetController = (function() {
-    let Expense = function(id, description, value) {
-        this.id = id;
-        this.description = description;
-        this.value = value;
-    };
-    let Income = function(id, description, value) {
-        this.id = id;
-        this.description = description;
-        this.value = value;
-    };
+    class Expense {
+        constructor(id, description, value) {
+            this.id = id;
+            this.description = description;
+            this.value = value;
+        }
+    }
+    class Income {
+        constructor(id, description, value) {
+            this.id = id;
+            this.description = description;
+            this.value = value;
+        }
+    }
     let data = {
         allItems: {
             exp: [],
@@ -17,10 +21,14 @@ let budgetController = (function() {
         totals: {
             exp: 0,
             inc: 0,
-        }
+        },
+        budget: 0,
+        percentage: -1,
     };
+
+
     return {
-        addItem: function(type, des, val) {
+        addItem: (type, des, val) => {
             let item, id;
             if (type ==='exp') {
                 id = data.allItems[type].length > 0? (data.allItems[type][data.allItems[type].length-1].id + 1) : 0;
@@ -35,14 +43,32 @@ let budgetController = (function() {
             return item;
 
         },
-        updateBudget: function() {
-            
+        deleteItem: (type,ID) => {
+            let IDArr = data.allItems[type].map(item => item.id);
+            let indItem = IDArr.indexOf(ID);
+            if (indItem !== -1) {
+                data.totals[type] -= data.allItems[type][indItem].value;
+                data.allItems[type].splice(indItem, 1);
+            }
+        },
+        calculateBudget: () => {
+            data.budget = data.totals.inc - data.totals.exp;
+            data.percentage = data.totals.inc>0? Math.round(data.totals.exp/data.totals.inc*100) : -1;
+        },
+        getBudget: () => {
+            return {
+                budget: data.budget,
+                totalInc: data.totals.inc,
+                totalExp: data.totals.exp,
+                percentage: data.percentage,
+                data: data
+            }
         }
     }
     
 })();
 
-let UIController = (function() {
+let UIController = ( () => {
     let DOMstrings = {
         inputType: '.add__type',
         inputDescription: '.add__description',
@@ -51,23 +77,24 @@ let UIController = (function() {
         incomeContainer: '.income__list',
         expenseContainer:'.expenses__list',
         budgetValue: '.budget__value',
-        budgeIncomeValue: '.budget__income--value',
-        budgeExpenseValue: '.budget__expenses--value',
-        budgetPrecentage: '.budget__expenses--percentage'
+        budgetIncomeValue: '.budget__income--value',
+        budgetExpenseValue: '.budget__expenses--value',
+        budgetPrecentage: '.budget__expenses--percentage',
+        container: '.container',
     }
     return {
-        getInput: function() {
+        getInput: () => {
             return {
                 type: document.querySelector(DOMstrings.inputType).value, //inc or exp
                 description: document.querySelector(DOMstrings.inputDescription).value,
                 value: parseFloat(document.querySelector(DOMstrings.inputValue).value)
             }
         },
-        addListItem: function(item, type) {
+        addListItem: (item, type) => {
             let html, ele;
             if (type === 'inc') {
                 ele = DOMstrings.incomeContainer;
-                html =`<div class="item clearfix" id="income-${item.id}">
+                html =`<div class="item clearfix" id="inc-${item.id}">
                             <div class="item__description">${item.description}</div>
                             <div class="right clearfix">
                                 <div class="item__value">${item.value.toFixed(2)}</div>
@@ -79,7 +106,7 @@ let UIController = (function() {
             }
             else if (type === 'exp') {
                 ele = DOMstrings.expenseContainer;
-                html = `<div class="item clearfix" id="expense-${item.id}">
+                html = `<div class="item clearfix" id="exp-${item.id}">
                         <div class="item__description">${item.description}</div>
                         <div class="right clearfix">
                             <div class="item__value">${item.value.toFixed(2)}</div>
@@ -93,48 +120,79 @@ let UIController = (function() {
             document.querySelector(ele).insertAdjacentHTML('beforeend',html);
         },
 
-        clearFields: function() {
+        removeListItem: (id) => {
+            document.getElementById(id).parentNode.removeChild(document.getElementById(id));
+        },
+
+        clearFields: () => {
             let fields = document.querySelectorAll(DOMstrings.inputDescription + ', ' + DOMstrings.inputValue);
             let arrFields = Array.prototype.slice.call(fields);
             arrFields.forEach(item => {item.value = "";});
             arrFields[0].focus();
         },
 
-        displayBudget: function(data) {
-            document.querySelector(DOMstrings.budgeIncomeValue).textContent = data.totals.inc.toFixed(2);
-            document.querySelector(DOMstrings.budgeExpenseValue).textContent = data.totals.exp.toFixed(2);
-            document.querySelector(DOMstrings.budgetPrecentage).textContent = (data.totals.exp / data.totals.inc * 100).toFixed(0) + '%';
-            document.querySelector(DOMstrings.budgetValue).textContent = (data.totals.inc - data.totals.exp).toFixed(2);
+        displayBudget: (data) => {
+            document.querySelector(DOMstrings.budgetIncomeValue).textContent = '+ ' + data.totalInc.toFixed(2);
+            document.querySelector(DOMstrings.budgetExpenseValue).textContent = '- ' + data.totalExp.toFixed(2);
+            document.querySelector(DOMstrings.budgetValue).textContent = data.budget.toFixed(2);
+            data.percentage>0? document.querySelector(DOMstrings.budgetPrecentage).textContent = data.percentage + '%' 
+                : document.querySelector(DOMstrings.budgetPrecentage).textContent = '---';
         },
-        getDOMstrings: function() {
+        getDOMstrings: () => {
             return DOMstrings;
         }
     }
 })();
 
-let globalController = (function(budgetCtrl, UICtrl) {
-    let setupEventListener = function() {
+let globalController = ( (budgetCtrl, UICtrl) => {
+    let setupEventListener = () => {
         let DOM = UICtrl.getDOMstrings();
         document.querySelector(DOM.inputBtn).addEventListener('click',ctrlAddItem);
         document.addEventListener('keypress', function(event) {
             if ((event.keyCode === 13) || (event.which === 13))
                 ctrlAddItem();
         });
+        document.querySelector(DOM.container).addEventListener('click', ctrlDeleteItem)
     }
     
-    let ctrlAddItem = function() {
+    let updateBudget = () => {
+        budgetCtrl.calculateBudget();
+        let budget = budgetCtrl.getBudget();
+        UICtrl.displayBudget(budget);
+    };
+
+    let ctrlAddItem = () => {
         let input = UICtrl.getInput();
         if (input.description !== "" && !isNaN(input.value) && input.value > 0){
             let newItem = budgetCtrl.addItem(input.type, input.description, input.value);
             UICtrl.addListItem(newItem, input.type);
-            budgetCtrl.updateBudget();
             UICtrl.clearFields();
+            updateBudget();
         }
     };
 
+    let ctrlDeleteItem = (event) => {
+        let itemID, splitID, type, ID;
+        itemID = event.target.parentNode.parentNode.parentNode.parentNode.id;
+        if (itemID) {
+            splitID = itemID.split('-');
+            type = splitID[0];
+            ID = parseInt(splitID[1]);
+        }
+        budgetCtrl.deleteItem(type, ID);
+        UICtrl.removeListItem(itemID);
+        updateBudget();
+    };
+
     return {
-        init: function() {
+        init: () => {
             setupEventListener();
+            UICtrl.displayBudget({ 
+                budget: 0,
+                totalInc: 0,
+                totalExp: 0,
+                percentage: -1,
+            });
         }
     };
     
