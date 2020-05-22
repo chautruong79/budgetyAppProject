@@ -90,7 +90,7 @@ let UIController = ( () => {
         budgetValue: '.budget__value',
         budgetIncomeValue: '.budget__income--value',
         budgetExpenseValue: '.budget__expenses--value',
-        budgetPrecentage: '.budget__expenses--percentage',
+        budgetPercentage: '.budget__expenses--percentage',
         container: '.container',
         itemPercentage: '.item__percentage',
         titleMonth: '.budget__title--month'
@@ -154,8 +154,8 @@ let UIController = ( () => {
             document.querySelector(DOMstrings.budgetIncomeValue).textContent = formatNumber(data.totalInc, 'inc');
             document.querySelector(DOMstrings.budgetExpenseValue).textContent = formatNumber(data.totalExp, 'exp');
             document.querySelector(DOMstrings.budgetValue).textContent = formatNumber(data.budget);
-            data.percentage>0? document.querySelector(DOMstrings.budgetPrecentage).textContent = data.percentage + '%' 
-                : document.querySelector(DOMstrings.budgetPrecentage).textContent = '---';
+            data.percentage>0? document.querySelector(DOMstrings.budgetPercentage).textContent = data.percentage + '%' 
+                : document.querySelector(DOMstrings.budgetPercentage).textContent = '---';
         },
         displayPercentages: (percentages) => {
             let fields = document.querySelectorAll(DOMstrings.itemPercentage);
@@ -206,7 +206,7 @@ let globalController = ( (budgetCtrl, UICtrl) => {
         UICtrl.displayBudget(budget);
     };
 
-    let updatePrecentages = () => {
+    let updatePercentage = () => {
         budgetCtrl.calculatePercentages();
         let percentages = budgetCtrl.getPercentages();
         UICtrl.displayPercentages(percentages);
@@ -219,7 +219,7 @@ let globalController = ( (budgetCtrl, UICtrl) => {
             UICtrl.addListItem(newItem, input.type);
             UICtrl.clearFields();
             updateBudget();
-            updatePrecentages();
+            updatePercentage();
         }
     };
 
@@ -234,7 +234,7 @@ let globalController = ( (budgetCtrl, UICtrl) => {
         budgetCtrl.deleteItem(type, ID);
         UICtrl.removeListItem(itemID);
         updateBudget();
-        updatePrecentages();
+        updatePercentage();
     };
 
     return {
